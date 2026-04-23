@@ -32,6 +32,7 @@ import type { ExtensionEntry, InstalledPackage, State } from "../types/index.js"
 import { logExtensionDelete, logExtensionToggle } from "../utils/history.js";
 import { getPackageSourceKind, normalizePackageIdentity } from "../utils/package-source.js";
 import { runTaskWithLoader } from "./async-task.js";
+import { showExampleExtensionsMenu } from "./examples.js";
 import { configurePackageExtensions } from "./package-config.js";
 import { showRemote } from "./remote.js";
 import { formatSize, getPackageIcon, getScopeIcon, getStatusIcon } from "./theme.js";
@@ -360,6 +361,7 @@ type PanelAction =
 	| { action: "remove"; item: Item }
 	| { action: "remote"; item: undefined }
 	| { action: "install"; item: undefined }
+	| { action: "examples"; item: undefined }
 	| { action: "update-all"; item: undefined }
 	| { action: "auto-update"; item: undefined }
 	| { action: "help"; item: undefined };
@@ -497,9 +499,9 @@ export async function showInteractive(
 							`name ${dot} /path ${dot} @source ${dot} spc ${dot} enter ${dot} esc`,
 						]
 					: [
-							`space toggle ${dot} a actions ${dot} i install ${dot} r remote ${dot} u update ${dot} U all ${dot} x remove ${dot} ? help`,
-							`spc toggle ${dot} a act ${dot} i inst ${dot} r remote ${dot} u upd ${dot} U all ${dot} x rm ${dot} ? help`,
-							`spc ${dot} a ${dot} i ${dot} r ${dot} u ${dot} U ${dot} x ${dot} ?`,
+							`space toggle ${dot} a actions ${dot} i install ${dot} e examples ${dot} r remote ${dot} u update ${dot} U all ${dot} x remove ${dot} ? help`,
+							`spc toggle ${dot} a act ${dot} i inst ${dot} e ex ${dot} r remote ${dot} u upd ${dot} U all ${dot} x rm ${dot} ? help`,
+							`spc ${dot} a ${dot} i ${dot} e ${dot} r ${dot} u ${dot} U ${dot} x ${dot} ?`,
 						];
 				const shortcutText = shortcutVariants.find((v) => v.length <= width) ?? shortcutVariants.at(-1) ?? "";
 				const shortcutLine = truncateToWidth(theme.fg("muted", shortcutText), width, "");
@@ -725,6 +727,10 @@ export async function showInteractive(
 					done({ action: "install", item: undefined });
 					return;
 				}
+				if (data === "e" || data === "E") {
+					done({ action: "examples", item: undefined });
+					return;
+				}
 				if (data === "U") {
 					done({ action: "update-all", item: undefined });
 					return;
@@ -858,7 +864,18 @@ async function handlePanelAction(
 	}
 
 	if (action.action === "install") {
+		const choice = await ctx.ui.select("Install", ["Community package", "Pi example extension", "Cancel"]);
+		if (!choice || choice === "Cancel") return NO_PANEL_ACTION_RESULT;
+		if (choice === "Pi example extension") {
+			const outcome = await showExampleExtensionsMenu(ctx);
+			return { ...NO_PANEL_ACTION_RESULT, reloadRequired: outcome.reloadRequired };
+		}
 		const outcome = await showRemote("install", ctx, pi, { reloadMode: "defer" });
+		return { ...NO_PANEL_ACTION_RESULT, reloadRequired: outcome.reloadRequired };
+	}
+
+	if (action.action === "examples") {
+		const outcome = await showExampleExtensionsMenu(ctx);
 		return { ...NO_PANEL_ACTION_RESULT, reloadRequired: outcome.reloadRequired };
 	}
 
@@ -972,7 +989,8 @@ function showHelpNotification(ctx: ExtensionCommandContext): void {
 		"  x            Remove selected item",
 		"",
 		"Global shortcuts:",
-		"  i            Install a package",
+		"  i            Install (community package or Pi example extension)",
+		"  e            Pi example extensions submenu",
 		"  U            Update all packages",
 		"  t            Auto-update wizard",
 		"  r            Browse remote packages",
