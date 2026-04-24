@@ -55,8 +55,8 @@ async function getExamplesRoot(): Promise<string> {
 	const candidates: string[] = [];
 
 	try {
-		const piPackageJson = require.resolve("@mariozechner/pi-coding-agent/package.json");
-		candidates.push(join(dirname(piPackageJson), "examples", "extensions"));
+		const piEntry = require.resolve("@mariozechner/pi-coding-agent");
+		candidates.push(join(dirname(piEntry), "..", "examples", "extensions"));
 	} catch {
 		// Fall back to path guesses below.
 	}
