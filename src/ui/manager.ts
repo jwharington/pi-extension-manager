@@ -13,7 +13,6 @@ import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-cod
 import { DynamicBorder, rawKeyHint } from "@mariozechner/pi-coding-agent";
 import {
 	Container,
-	getKeybindings,
 	Input,
 	matchesKey,
 	Spacer,
@@ -415,8 +414,8 @@ export async function showInteractive(
 	const staged = new Map<string, State>();
 	let changeCount = 0;
 
-	const panelResult = await ctx.ui.custom<PanelAction | undefined>((tui, theme, _kb, done) => {
-		const kb = getKeybindings();
+	const panelResult = await ctx.ui.custom<PanelAction | undefined>((tui, theme, keybindings, done) => {
+		const kb = keybindings;
 		let viewMode: ViewMode = "by-source";
 		let masterList: FlatEntry[] = buildFlatList(groups, viewMode);
 		let filteredItems: FlatEntry[] = [...masterList];
@@ -598,12 +597,16 @@ export async function showInteractive(
 					if (viewMode === "active-first") rebuildForMode();
 				}
 
+				function matchesShortcut(d: string, ...keys: string[]): boolean {
+					return keys.some((key) => d === key || matchesKey(d, key as never));
+				}
+
 				function isSpaceKey(d: string): boolean {
-					return d === " ";
+					return d === " " || matchesKey(d, "space");
 				}
 
 				function isEnterKey(d: string): boolean {
-					return d === "\r" || d === "\n" || kb.matches(d, "tui.select.confirm");
+					return d === "\r" || d === "\n" || kb.matches(d, "tui.select.confirm") || matchesKey(d, "return");
 				}
 
 				function handleToggle(): void {
@@ -692,7 +695,7 @@ export async function showInteractive(
 				// --- Below: normal mode (search NOT active) ---
 
 				// 6. Activate search
-				if (data === "/" || data === "f" || data === "F") {
+				if (matchesShortcut(data, "/", "f", "F")) {
 					searchActive = true;
 					tui.requestRender();
 					return;
@@ -701,49 +704,49 @@ export async function showInteractive(
 				// 7. Shortcuts — actions on selected item
 				const selectedItem = getSelectedItem();
 
-				if ((data === "a" || data === "A") && selectedItem?.kind === "package") {
+				if (matchesShortcut(data, "a", "A") && selectedItem?.kind === "package") {
 					done({ action: "package-actions", item: selectedItem });
 					return;
 				}
-				if (data === "u" && selectedItem?.kind === "package") {
+				if (matchesShortcut(data, "u") && selectedItem?.kind === "package") {
 					done({ action: "update", item: selectedItem });
 					return;
 				}
-				if ((data === "v" || data === "V") && selectedItem?.kind === "package") {
+				if (matchesShortcut(data, "v", "V") && selectedItem?.kind === "package") {
 					done({ action: "details", item: selectedItem });
 					return;
 				}
-				if ((data === "c" || data === "C") && selectedItem?.kind === "package") {
+				if (matchesShortcut(data, "c", "C") && selectedItem?.kind === "package") {
 					done({ action: "configure", item: selectedItem });
 					return;
 				}
-				if ((data === "x" || data === "X") && selectedItem) {
+				if (matchesShortcut(data, "x", "X") && selectedItem) {
 					done({ action: "remove", item: selectedItem });
 					return;
 				}
 
 				// 8. Global shortcuts
-				if (data === "i" || data === "I") {
+				if (matchesShortcut(data, "i", "I")) {
 					done({ action: "install", item: undefined });
 					return;
 				}
-				if (data === "e" || data === "E") {
+				if (matchesShortcut(data, "e", "E")) {
 					done({ action: "examples", item: undefined });
 					return;
 				}
-				if (data === "U") {
+				if (matchesShortcut(data, "U", "shift+u")) {
 					done({ action: "update-all", item: undefined });
 					return;
 				}
-				if (data === "t" || data === "T") {
+				if (matchesShortcut(data, "t", "T")) {
 					done({ action: "auto-update", item: undefined });
 					return;
 				}
-				if (data === "r" || data === "R") {
+				if (matchesShortcut(data, "r", "R")) {
 					done({ action: "remote", item: undefined });
 					return;
 				}
-				if (data === "?" || data === "h" || data === "H") {
+				if (matchesShortcut(data, "?", "h", "H", "shift+/")) {
 					done({ action: "help", item: undefined });
 					return;
 				}

@@ -186,7 +186,7 @@ async function showConfigurePanel(
 				syncThemedContent();
 			},
 			handleInput(data: string) {
-				if (matchesKey(data, "ctrl+s") || data === "s" || data === "S") {
+				if (matchesKey(data, "ctrl+s") || matchesKey(data, "s") || data === "s" || data === "S") {
 					done({ type: "save" });
 					return;
 				}

@@ -3,7 +3,7 @@
  */
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import { DynamicBorder } from "@mariozechner/pi-coding-agent";
-import { Container, getKeybindings, Input, matchesKey, type SelectItem, SelectList, Text } from "@mariozechner/pi-tui";
+import { Container, Input, matchesKey, type SelectItem, SelectList, Text } from "@mariozechner/pi-tui";
 import { CACHE_LIMITS, PAGE_SIZE, TIMEOUTS } from "../constants.js";
 import { getSearchCache, isCacheValid, searchNpmPackages, setSearchCache } from "../packages/discovery.js";
 import { installPackage, installPackageLocally } from "../packages/install.js";
@@ -328,8 +328,8 @@ async function selectBrowseAction(
 		return filter ? pkgItems : [...pkgItems, ...navItems];
 	}
 
-	return ctx.ui.custom<BrowseAction>((tui, theme, _keybindings, done) => {
-		const kb = getKeybindings();
+	return ctx.ui.custom<BrowseAction>((tui, theme, keybindings, done) => {
+		const kb = keybindings;
 		const container = new Container();
 		const topBorder = new DynamicBorder((s: string) => theme.fg("accent", s));
 		const title = new Text("", 1, 0);
@@ -414,6 +414,8 @@ async function selectBrowseAction(
 				syncThemedContent();
 			},
 			handleInput: (data: string) => {
+				const matchesShortcut = (...keys: string[]): boolean =>
+					keys.some((key) => data === key || matchesKey(data, key as never));
 				// Navigation always works
 				if (kb.matches(data, "tui.select.up") || kb.matches(data, "tui.select.down")) {
 					selectList.handleInput(data);
@@ -457,7 +459,7 @@ async function selectBrowseAction(
 				}
 
 				// Activate search
-				if (data === "/" || data === "f" || data === "F") {
+				if (matchesShortcut("/", "f", "F")) {
 					searchActive = true;
 					syncThemedContent();
 					tui.requestRender();
