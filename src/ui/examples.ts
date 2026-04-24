@@ -1,6 +1,7 @@
 import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
+import process from "node:process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
@@ -62,6 +63,12 @@ async function getExamplesRoot(): Promise<string> {
 	}
 
 	candidates.push(
+		// Global npm install fallback (common on Windows / nvm)
+		join(dirname(process.execPath), "node_modules", "@mariozechner", "pi-coding-agent", "examples", "extensions"),
+		// Derive from the active pi CLI path when available
+		...(process.argv[1]
+			? [join(dirname(process.argv[1]), "..", "examples", "extensions"), join(dirname(process.argv[1]), "examples", "extensions")]
+			: []),
 		// Typical when pi-extension-manager has a nested dependency install
 		join(CURRENT_DIR, "..", "..", "node_modules", "@mariozechner", "pi-coding-agent", "examples", "extensions"),
 		join(CURRENT_DIR, "..", "..", "..", "node_modules", "@mariozechner", "pi-coding-agent", "examples", "extensions"),
