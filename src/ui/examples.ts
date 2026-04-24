@@ -1,4 +1,5 @@
 import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,6 +30,7 @@ export interface ExampleMenuOutcome {
 
 const CURRENT_FILE = fileURLToPath(import.meta.url);
 const CURRENT_DIR = dirname(CURRENT_FILE);
+const require = createRequire(import.meta.url);
 
 function scopeRoot(scope: Scope, cwd: string): string {
 	return scope === "global" ? join(homedir(), ".pi", "agent", "extensions") : join(cwd, ".pi", "extensions");
@@ -50,7 +52,16 @@ function targetIndexPaths(exampleId: string, scope: Scope, cwd: string): { activ
 }
 
 async function getExamplesRoot(): Promise<string> {
-	const candidates = [
+	const candidates: string[] = [];
+
+	try {
+		const piPackageJson = require.resolve("@mariozechner/pi-coding-agent/package.json");
+		candidates.push(join(dirname(piPackageJson), "examples", "extensions"));
+	} catch {
+		// Fall back to path guesses below.
+	}
+
+	candidates.push(
 		// Typical when pi-extension-manager has a nested dependency install
 		join(CURRENT_DIR, "..", "..", "node_modules", "@mariozechner", "pi-coding-agent", "examples", "extensions"),
 		join(CURRENT_DIR, "..", "..", "..", "node_modules", "@mariozechner", "pi-coding-agent", "examples", "extensions"),
@@ -58,7 +69,7 @@ async function getExamplesRoot(): Promise<string> {
 		join(CURRENT_DIR, "..", "..", "..", "..", "@mariozechner", "pi-coding-agent", "examples", "extensions"),
 		// Project-local install fallback
 		join(process.cwd(), "node_modules", "@mariozechner", "pi-coding-agent", "examples", "extensions"),
-	];
+	);
 
 	for (const candidate of candidates) {
 		if (await fileExists(candidate)) return candidate;
